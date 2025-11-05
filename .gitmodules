@@ -1,0 +1,9 @@
+[submodule "claude-code-hooks-multi-agent-observability"]
+	path = claude-code-hooks-multi-agent-observability
+	url = https://github.com/disler/claude-code-hooks-multi-agent-observability.git
+[submodule "opencode"]
+	path = opencode
+	url = https://github.com/sst/opencode.git
+[submodule "Uri-and-Dror-common-repo-toolkit"]
+	path = Uri-and-Dror-common-repo-toolkit
+	url = https://github.com/drrozen-med/Uri-and-Dror-common-repo-toolkit.git
