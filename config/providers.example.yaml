@@ -1,0 +1,45 @@
+# Map logical orchestrator/worker roles to provider + model configuration.
+# Copy to providers.yaml and edit values to match your credentials/quota.
+
+orchestrator:
+  provider: gemini
+  model: gemini-2.0-flash-exp
+  temperature: 0.0
+  system_prompt_path: files/orchestrator.md
+  # Alternative configurations (uncomment as needed)
+  # - provider: openai
+  #   model: codex-5-high
+  #   endpoint: https://api.openai.com/v1
+  # - provider: anthropic
+  #   model: claude-3-5-sonnet-20241022
+
+workers:
+  local_primary:
+    provider: ollama
+    model: qwen2.5-coder:14b-instruct-q5_K_M
+    behavior_profile: strict
+  local_fallback:
+    provider: ollama
+    model: qwen2.5-coder:7b-instruct
+    behavior_profile: balanced
+  cloud_reasoner:
+    provider: anthropic
+    model: claude-3-5-sonnet-20241022
+    budget_usd: 0.40
+  cloud_fast:
+    provider: gemini
+    model: gemini-2.0-flash-exp
+    budget_usd: 0.05
+
+# Define per-provider credential environment variables.
+credentials:
+  gemini: GEMINI_API_KEY
+  openai: OPENAI_API_KEY
+  anthropic: ANTHROPIC_API_KEY
+
+# Optional: default budgets and limits.
+budget:
+  max_session_usd: 5.0
+  max_task_usd: 0.75
+
+# Future work: add azure, aws, groq endpoints.

@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Entry point for Rozet Orchestrator - handles PYTHONPATH automatically."""
+
+import os
+import sys
+from pathlib import Path
+
+# Set PYTHONPATH to project root automatically
+PROJECT_ROOT = Path(__file__).parent.absolute()
+sys.path.insert(0, str(PROJECT_ROOT))
+os.environ['PYTHONPATH'] = str(PROJECT_ROOT)
+
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    # Try multiple locations
+    env_locations = [
+        PROJECT_ROOT / ".env",  # Project root
+        PROJECT_ROOT.parent / ".env",  # Parent directory
+        Path.cwd() / ".env",  # Current working directory
+        PROJECT_ROOT / "credentials" / ".env",  # Credentials directory
+    ]
+    
+    loaded = False
+    for env_path in env_locations:
+        if env_path.exists():
+            load_dotenv(env_path, override=not loaded)
+            loaded = True
+    
+    # Also try standard load_dotenv (searches current dir and parents)
+    if not loaded:
+        load_dotenv(override=False)
+except ImportError:
+    # python-dotenv not installed, skip
+    pass
+
+# Now import and run the actual CLI
+from orchestrator.cli import main
+
+if __name__ == "__main__":
+    sys.exit(main())
+

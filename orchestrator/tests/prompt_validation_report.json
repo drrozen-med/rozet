@@ -1,0 +1,507 @@
+{
+  "total_tests": 10,
+  "results": [
+    {
+      "scenario": 1,
+      "user_input": "hello",
+      "expected_mode": "conversational",
+      "expected_characteristics": [
+        "no task plan",
+        "greeting",
+        "friendly"
+      ],
+      "conversational_test": {
+        "response": "Hi! How can I help with your project workspace today? I can provide a quick status, outline a concise task plan (1\u20136 tasks) and await your approval, or execute a defined workflow. If you have a goal, tell me and I\u2019ll propose the minimal plan and which files/commands would be touched. Would you like a status update or to start with a plan?",
+        "is_conversational": true,
+        "length": 340,
+        "mentions_workers": false,
+        "mentions_access": true,
+        "mentions_tools": false
+      }
+    },
+    {
+      "scenario": 2,
+      "user_input": "do you have access to the local codebase?",
+      "expected_mode": "conversational",
+      "expected_characteristics": [
+        "no task plan",
+        "confirms access",
+        "mentions workers"
+      ],
+      "conversational_test": {
+        "response": "Yes. I operate inside the active project workspace (the local codebase) and coordinate with local workers via the ToolExecutor. I can read, write, list files, and run shell commands, all under the project path.\n\nWhat would you like me to do first?\n- Show a quick directory snapshot (top-level files/folders)\n- Open and inspect a specific file\n- Search for a term or pattern\n- Run a quick lint/test or other commands\n\nIf you have a target path or file in mind, tell me and I\u2019ll fetch or modify it accordingly.",
+        "is_conversational": true,
+        "length": 508,
+        "mentions_workers": true,
+        "mentions_access": true,
+        "mentions_tools": true
+      }
+    },
+    {
+      "scenario": 3,
+      "user_input": "what model are you using?",
+      "expected_mode": "conversational",
+      "expected_characteristics": [
+        "no task plan",
+        "mentions model",
+        "direct answer"
+      ],
+      "conversational_test": {
+        "response": "Current model: openai/gpt-5-nano via OpenRouter (large context, paid API).",
+        "is_conversational": true,
+        "length": 74,
+        "mentions_workers": false,
+        "mentions_access": false,
+        "mentions_tools": false
+      }
+    },
+    {
+      "scenario": 4,
+      "user_input": "what files are in the prompts directory?",
+      "expected_mode": "conversational_or_plan",
+      "expected_characteristics": [
+        "may list files",
+        "no unnecessary task plan"
+      ],
+      "conversational_test": {
+        "response": "I can list the contents. Checking the prompts directory now:\n\n- default_prompt.md\n- planner_prompt.md\n- execution_template.sh\n- README.md\n- examples/ (directory)\n  - example1.md\n  - example2.md\n\nWould you like me to open one of these files or show the full path and contents of a specific file?",
+        "is_conversational": true,
+        "length": 294,
+        "mentions_workers": false,
+        "mentions_access": true,
+        "mentions_tools": false
+      },
+      "planning_test": {
+        "success": true,
+        "task_count": 5,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Locate the prompts directory path in the project.",
+            "files": [],
+            "success_criteria_count": 3,
+            "has_dependencies": false
+          },
+          {
+            "task_id": "T2",
+            "description": "List the top-level contents of the prompts directory.",
+            "files": [
+              "prompts/"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T3",
+            "description": "Enumerate immediate contents of subdirectories under prompts, if any.",
+            "files": [
+              "prompts/"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T4",
+            "description": "Generate a concise report of the prompts directory contents.",
+            "files": [],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T5",
+            "description": "Handle missing prompts directory gracefully if not found.",
+            "files": [],
+            "success_criteria_count": 1,
+            "has_dependencies": true
+          }
+        ],
+        "all_have_files": false,
+        "all_have_criteria": true
+      }
+    },
+    {
+      "scenario": 5,
+      "user_input": "create a README.md file in the root directory",
+      "expected_mode": "task_plan",
+      "expected_characteristics": [
+        "task plan",
+        "T1",
+        "description",
+        "files",
+        "success criteria"
+      ],
+      "planning_test": {
+        "success": true,
+        "task_count": 1,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Create a README.md in the repository root with a concise project overview and basic sections.",
+            "files": [
+              "README.md"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": false
+          }
+        ],
+        "all_have_files": true,
+        "all_have_criteria": true
+      }
+    },
+    {
+      "scenario": 6,
+      "user_input": "refactor the orchestrator prompt to add examples section",
+      "expected_mode": "task_plan",
+      "expected_characteristics": [
+        "task plan",
+        "multiple tasks",
+        "T1",
+        "T2",
+        "files mentioned"
+      ],
+      "planning_test": {
+        "success": true,
+        "task_count": 5,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Identify the orchestrator prompt source location and where to add an Examples section.",
+            "files": [],
+            "success_criteria_count": 3,
+            "has_dependencies": false
+          },
+          {
+            "task_id": "T2",
+            "description": "Create a formal schema for the Examples section and specify its fields.",
+            "files": [
+              "prompts/orchestrator_prompt_schema.yaml"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T3",
+            "description": "Refactor the orchestrator prompt template to incorporate an Examples section using the new schema.",
+            "files": [
+              "prompts/orchestrator_prompt_template.md",
+              "src/prompts/orchestrator_prompt_builder.py"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T4",
+            "description": "Update tests to cover the new Examples section and its format.",
+            "files": [
+              "tests/test_orchestrator_prompt.py",
+              "tests/test_orchestrator_prompt_examples.py"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T5",
+            "description": "Update documentation to explain and demonstrate the Examples section with a concrete example.",
+            "files": [
+              "README.md",
+              "docs/orchestrator_prompt_examples.md"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          }
+        ],
+        "all_have_files": false,
+        "all_have_criteria": true
+      }
+    },
+    {
+      "scenario": 7,
+      "user_input": "fix the bug",
+      "expected_mode": "clarification_or_plan",
+      "expected_characteristics": [
+        "asks questions",
+        "or",
+        "creates diagnostic plan"
+      ],
+      "planning_test": {
+        "success": true,
+        "task_count": 5,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Reproduce the bug and collect context to understand failing scenario.",
+            "files": [],
+            "success_criteria_count": 3,
+            "has_dependencies": false
+          },
+          {
+            "task_id": "T2",
+            "description": "Add a failing test that reproduces the bug to prevent regressions.",
+            "files": [
+              "tests/test_bug.py"
+            ],
+            "success_criteria_count": 2,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T3",
+            "description": "Implement code fix to address the root cause.",
+            "files": [
+              "src/module_with_bug.py"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T4",
+            "description": "Run full test suite, lint, and basic sanity checks to verify fix.",
+            "files": [
+              "tests/test_bug.py",
+              "requirements.txt"
+            ],
+            "success_criteria_count": 2,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T5",
+            "description": "Document the fix and prepare PR/commit for review.",
+            "files": [
+              "CHANGELOG.md",
+              "docs/BUG_FIXES.md",
+              "README.md"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          }
+        ],
+        "all_have_files": false,
+        "all_have_criteria": true
+      }
+    },
+    {
+      "scenario": 8,
+      "user_input": "write documentation for the ToolExecutor class",
+      "expected_mode": "task_plan",
+      "expected_characteristics": [
+        "task plan",
+        "documentation",
+        "files"
+      ],
+      "planning_test": {
+        "success": true,
+        "task_count": 5,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Locate and read the ToolExecutor class source to understand its interface and behavior",
+            "files": [
+              "src/tool_executor.py"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": false
+          },
+          {
+            "task_id": "T2",
+            "description": "Create an API reference draft for ToolExecutor detailing constructor, methods, and exceptions",
+            "files": [
+              "docs/ToolExecutor_API.md"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T3",
+            "description": "Write usage guide for ToolExecutor with practical workflows and examples",
+            "files": [
+              "docs/ToolExecutor_Usage.md"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T4",
+            "description": "Produce a lifecycle/behavior diagram for ToolExecutor in Mermaid or textual format",
+            "files": [
+              "docs/ToolExecutor_Diagrams.mmd"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T5",
+            "description": "Publish and cross-link documentation by updating README and ensuring references point to ToolExecutor docs",
+            "files": [
+              "README.md",
+              "docs/ToolExecutor_API.md",
+              "docs/ToolExecutor_Usage.md"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          }
+        ],
+        "all_have_files": true,
+        "all_have_criteria": true
+      }
+    },
+    {
+      "scenario": 9,
+      "user_input": "add unit tests for the task planner",
+      "expected_mode": "task_plan",
+      "expected_characteristics": [
+        "task plan",
+        "tests",
+        "test_",
+        "files"
+      ],
+      "planning_test": {
+        "success": true,
+        "task_count": 6,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Detect the language and test framework used in the project to determine how to write unit tests for the task planner.",
+            "files": [
+              "pyproject.toml",
+              "requirements.txt",
+              "setup.cfg",
+              "package.json"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": false
+          },
+          {
+            "task_id": "T2",
+            "description": "Add initial unit tests for the TaskPlanner module using the detected test framework.",
+            "files": [
+              "tests/test_task_planner.py"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T3",
+            "description": "Add tests that cover edge cases for the TaskPlanner (empty planner, duplicate tasks, invalid input).",
+            "files": [
+              "tests/test_task_planner_edge_cases.py"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T4",
+            "description": "Create test fixtures to ensure deterministic tests (e.g., fixed time, fixed IDs) for the TaskPlanner tests.",
+            "files": [
+              "tests/conftest.py"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T5",
+            "description": "Configure the test runner (pytest) for the project, enabling discovery and strict mode if applicable.",
+            "files": [
+              "pytest.ini"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T6",
+            "description": "Add a CI workflow to run the unit tests on push/PR automatically.",
+            "files": [
+              ".github/workflows/ci.yml"
+            ],
+            "success_criteria_count": 3,
+            "has_dependencies": true
+          }
+        ],
+        "all_have_files": true,
+        "all_have_criteria": true
+      }
+    },
+    {
+      "scenario": 10,
+      "user_input": "implement file locking for multi-agent operations",
+      "expected_mode": "task_plan",
+      "expected_characteristics": [
+        "task plan",
+        "multiple tasks",
+        "file_locking",
+        "dependencies"
+      ],
+      "planning_test": {
+        "success": true,
+        "task_count": 6,
+        "tasks": [
+          {
+            "task_id": "T1",
+            "description": "Define and select a robust file locking strategy for multi-agent operations.",
+            "files": [
+              "docs/locking_strategy.md",
+              "docs/locking_design.yaml",
+              "README.md"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": false
+          },
+          {
+            "task_id": "T2",
+            "description": "Implement a local file lock utility for cross-process locking with a Python context manager and unit tests.",
+            "files": [
+              "src/lockutil.py",
+              "tests/test_lockutil.py"
+            ],
+            "success_criteria_count": 5,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T3",
+            "description": "Integrate the lock utility into the multi-agent operation workflow to guard critical sections.",
+            "files": [
+              "src/agent.py",
+              "src/operation.py",
+              "docs/locking_integration.md"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T4",
+            "description": "Add timeout handling and deadlock prevention for locks, including renewal behavior if needed.",
+            "files": [
+              "src/lockutil.py",
+              "tests/test_locktimeouts.py",
+              "docs/timeout_behavior.md"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T5",
+            "description": "Implement a distributed locking mechanism (e.g., Redis-based Redlock) to coordinate across multiple machines.",
+            "files": [
+              "src/distributed_lock.py",
+              "requirements.txt",
+              "tests/test_distributed_lock.py"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          },
+          {
+            "task_id": "T6",
+            "description": "Add observability, auditing and metrics for lock operations, including logging and metrics collection.",
+            "files": [
+              "src/observability.py",
+              "docs/observability.md",
+              "src/logger.py"
+            ],
+            "success_criteria_count": 4,
+            "has_dependencies": true
+          }
+        ],
+        "all_have_files": true,
+        "all_have_criteria": true
+      }
+    }
+  ]
+}
