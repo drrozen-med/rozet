@@ -8,14 +8,19 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from json import JSONDecoder
+import re
+
 from ..core.coordinator import WorkerResult
 from ..core.task_planner import TaskSpec
 from .tool_executor import ToolExecutor
 
 LOGGER = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "qwen2.5-coder:14b-instruct"
+# OpenAI OSS-20 model running locally via Ollama
+DEFAULT_MODEL = "gpt-oss:20b"
 DEFAULT_FORMAT = "json"
+ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
 class LocalWorker:
@@ -56,8 +61,8 @@ class LocalWorker:
             # Call Ollama
             response = self._call_ollama(prompt)
             
-            # Parse JSON response
-            result_data = json.loads(response)
+            # Parse JSON response (handle markdown/code fences)
+            result_data = self._parse_result_data(response)
             
             # Extract tool usage information
             tools_used = result_data.get("tools_used", [])
@@ -136,74 +141,76 @@ class LocalWorker:
             prompt_parts.append("")
         
         prompt_parts.extend([
-            "AVAILABLE TOOLS:",
-            "You have access to the following tools to execute this task:",
+            "TOOLS: read_file(path), write_file(path, content), execute_bash(cmd), list_files(dir, pattern)",
             "",
-            "1. read_file(file_path): Read a file's contents",
-            "   Example: read_file('config.py')",
+            "Return JSON only:",
+            '{"success": bool, "tools_used": [{"tool": "name", "file": "path", "result": "status"}],',
+            ' "files_modified": ["paths"], "files_created": ["paths"], "tests_run": [],',
+            ' "verification_passed": bool, "errors": [], "logs": "text"}',
             "",
-            "2. write_file(file_path, content): Write content to a file",
-            "   Example: write_file('hello.py', 'print(\"Hello\")')",
-            "",
-            "3. execute_bash(command): Execute a bash command",
-            "   Example: execute_bash('python hello.py')",
-            "",
-            "4. list_files(directory, pattern): List files in a directory",
-            "   Example: list_files('.', '*.py')",
-            "",
-            "TOOL USAGE INSTRUCTIONS:",
-            "- Use tools to actually perform file operations and run commands",
-            "- After using tools, verify the results",
-            "- Include tool usage in your logs",
-            "",
-            "Execute this task and return a JSON response with this exact format:",
-            "{",
-            '  "success": true/false,',
-            '  "tools_used": [{"tool": "tool_name", "file": "file_path", "result": "success/failure"}],',
-            '  "files_modified": ["list of file paths"],',
-            '  "files_created": ["list of new file paths"],',
-            '  "tests_run": [{"name": "test name", "status": "passed/failed", "duration_ms": 123}],',
-            '  "verification_passed": true/false,',
-            '  "errors": ["list of error messages"],',
-            '  "logs": "execution log text including tool usage"',
-            "}",
-            "",
-            "IMPORTANT:",
-            "- Use the available tools to actually perform operations",
-            "- Verify all changes before claiming success",
-            "- Read files back after writing to confirm",
-            "- Run tests if applicable",
-            "- Report actual errors, not assumptions",
-            "- Include tool usage details in your logs",
-            "",
-            "Begin execution:",
+            "Execute:",
         ])
         
         return "\n".join(prompt_parts)
 
     def _call_ollama(self, prompt: str) -> str:
-        """Call Ollama API and return response."""
-        cmd = [
-            "ollama",
-            "run",
-            self._model,
-            prompt,
-        ]
+        """Call Ollama API via HTTP and return response."""
+        import requests
         
-        LOGGER.debug("Calling Ollama: %s", " ".join(cmd[:3]))
+        url = "http://localhost:11434/api/generate"
+        payload = {
+            "model": self._model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",  # Request JSON format for structured output
+        }
         
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=str(self._working_dir),
-            timeout=300,  # 5 minute timeout
-        )
+        LOGGER.debug("Calling Ollama HTTP API: %s", self._model)
         
-        if result.returncode != 0:
-            raise RuntimeError(f"Ollama failed: {result.stderr}")
-        
-        return result.stdout.strip()
+        try:
+            response = requests.post(url, json=payload, timeout=120)
+            response.raise_for_status()
+            data = response.json()
+            return data.get("response", "").strip()
+        except requests.exceptions.RequestException as exc:
+            LOGGER.error("Ollama HTTP API failed: %s", exc)
+            raise RuntimeError(f"Ollama API failed: {exc}") from exc
+
+    # ------------------------------------------------------------------
+    # Response parsing helpers
+    # ------------------------------------------------------------------
+    def _parse_result_data(self, response: str) -> Dict:
+        """Parse JSON response from worker, tolerating markdown wrappers."""
+        decoder = JSONDecoder()
+        stripped = ANSI_ESCAPE_RE.sub("", response).strip()
+        if not stripped:
+            raise json.JSONDecodeError("Empty response", response, 0)
+
+        candidates = []
+
+        # Split out fenced code blocks if present
+        if "```" in stripped:
+            parts = stripped.split("```")
+            for part in parts:
+                segment = part.strip()
+                if not segment:
+                    continue
+                if segment.lower().startswith("json"):
+                    segment = segment[4:].strip()
+                candidates.append(segment)
+        else:
+            candidates.append(stripped)
+
+        for candidate in candidates:
+            for idx, char in enumerate(candidate):
+                if char in "{[":
+                    try:
+                        obj, end = decoder.raw_decode(candidate, idx)
+                        return obj
+                    except json.JSONDecodeError:
+                        continue
+
+        raise json.JSONDecodeError("No JSON object found", response, 0)
 
     def _process_tool_usage(
         self, tools_used: List[Dict[str, str]], working_dir: Path, result_data: Dict

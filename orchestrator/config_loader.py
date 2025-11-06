@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -146,6 +146,8 @@ def load_provider_config(config_path: Optional[os.PathLike[str]] = None) -> Prov
             required_providers.append(provider)
     
     _validate_credentials(config.credentials, strict=strict_validation, required_providers=required_providers)
+
+    config = _apply_env_overrides(config)
     return config
 
 
@@ -180,6 +182,35 @@ def _validate_credentials(cred_map: Dict[str, str], strict: bool = True, require
             logging.getLogger(__name__).warning(
                 "Missing provider credentials: %s. Some features may not work.", joined
             )
+
+
+def _apply_env_overrides(config: ProviderMap) -> ProviderMap:
+    """Apply environment variable overrides to provider config."""
+    provider_env_prefix = "ROZET_ORCHESTRATOR_"
+    overrides = {
+        "provider": os.environ.get(f"{provider_env_prefix}PROVIDER"),
+        "model": os.environ.get(f"{provider_env_prefix}MODEL"),
+        "endpoint": os.environ.get(f"{provider_env_prefix}ENDPOINT"),
+        "temperature": os.environ.get(f"{provider_env_prefix}TEMPERATURE"),
+        "system_prompt_path": os.environ.get(f"{provider_env_prefix}SYSTEM_PROMPT"),
+    }
+
+    # Determine if any overrides are set
+    if any(value is not None for value in overrides.values()):
+        new_kwargs = {}
+        for key, value in overrides.items():
+            if value is None:
+                continue
+            if key == "temperature":
+                try:
+                    value = float(value)
+                except ValueError:
+                    continue
+            new_kwargs[key] = value
+        if new_kwargs:
+            config.orchestrator = replace(config.orchestrator, **new_kwargs)
+
+    return config
 
 
 def dump_provider_config(config: ProviderMap) -> str:

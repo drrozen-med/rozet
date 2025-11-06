@@ -53,8 +53,15 @@ def _build_openai_model(config: ProviderConfig) -> BaseChatModel:
         if not api_key:
             raise ValueError(
                 "OPENROUTER_API_KEY environment variable not set. "
-                "When using OpenRouter, set: export OPENROUTER_API_KEY='your-openrouter-key'"
+                "When using OpenRouter, set: export OPENROUTER_API_KEY='your-openrouter-key' "
+                "Or add it to .env file in the project root."
             )
+        default_headers = {
+            "HTTP-Referer": os.environ.get(
+                "OPENROUTER_HTTP_REFERER", "https://github.com/Uri-and-Dror/rozet"
+            ),
+            "X-Title": os.environ.get("OPENROUTER_X_TITLE", "Rozet Orchestrator"),
+        }
     else:
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
@@ -62,13 +69,18 @@ def _build_openai_model(config: ProviderConfig) -> BaseChatModel:
                 "OPENAI_API_KEY environment variable not set. "
                 "Please set it: export OPENAI_API_KEY='your-key-here'"
             )
+        default_headers = None
     
-    return ChatOpenAI(
+    kwargs = dict(
         model=config.model,
         temperature=config.temperature,
         base_url=config.endpoint,
         api_key=api_key,
     )
+    if default_headers:
+        kwargs["default_headers"] = default_headers
+
+    return ChatOpenAI(**kwargs)
 
 
 def _build_gemini_model(config: ProviderConfig) -> BaseChatModel:

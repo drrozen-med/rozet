@@ -1,0 +1,70 @@
+#!/usr/bin/expect -f
+# Interactive REPL testing with expect
+
+set timeout 30
+log_user 1
+
+puts "\n=== TEST 1: Basic REPL Startup ==="
+puts "Starting rozett --repl...\n"
+
+spawn rozett --repl
+
+# Wait for prompt or welcome message
+expect {
+    -re "rozet.*>" {
+        puts "\n✅ REPL started successfully"
+        puts "✅ Prompt appeared: $expect_out(0,string)"
+    }
+    -re "Welcome" {
+        puts "\n✅ Welcome message displayed"
+        exp_continue
+    }
+    -re "Error" {
+        puts "\n❌ Error on startup: $expect_out(0,string)"
+        exit 1
+    }
+    timeout {
+        puts "\n❌ Timeout - REPL didn't start within 30 seconds"
+        exit 1
+    }
+    eof {
+        puts "\n❌ REPL exited immediately"
+        exit 1
+    }
+}
+
+puts "\n=== TEST 2: Greeting Interaction ==="
+puts "Typing: hello\n"
+
+send "hello\r"
+
+expect {
+    -re "(?i)(hi|hello|hey|greet)" {
+        puts "\n✅ Friendly greeting received"
+    }
+    -re "Error" {
+        puts "\n❌ Error on greeting: $expect_out(0,string)"
+    }
+    timeout {
+        puts "\n❌ No response to greeting within 30 seconds"
+    }
+}
+
+puts "\n=== TEST 3: Exit Command ==="
+puts "Typing: exit\n"
+
+send "exit\r"
+
+expect {
+    -re "(?i)(goodbye|exit|bye)" {
+        puts "\n✅ Clean exit message"
+    }
+    eof {
+        puts "\n✅ REPL exited cleanly"
+    }
+    timeout {
+        puts "\n❌ Exit command didn't work"
+    }
+}
+
+puts "\n=== Test Complete ==="

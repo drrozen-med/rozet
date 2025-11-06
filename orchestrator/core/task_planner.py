@@ -62,7 +62,12 @@ class TaskPlanner:
 
     def plan(self, request: str, context_summary: str = "") -> List[TaskSpec]:
         prompt = self._build_prompt(request, context_summary)
-        response = self._llm.invoke(prompt)
+        try:  # pragma: no cover - defensive (LLM failures are runtime issues)
+            response = self._llm.invoke(prompt)
+        except Exception as exc:
+            LOGGER.error("Planner invocation failed: %s", exc)
+            return self._fallback_plan(request, context_summary, error=str(exc))
+
         raw_text = getattr(response, "content", str(response))
         LOGGER.debug("Planner raw response: %s", raw_text)
         
@@ -81,14 +86,14 @@ class TaskPlanner:
         
         if not raw_text:
             LOGGER.error("Planner returned empty response")
-            raise ValueError("Planner returned empty response")
+            return self._fallback_plan(request, context_summary, error="empty response")
         
         try:
             payload = json.loads(raw_text)
         except json.JSONDecodeError as exc:
             LOGGER.error("Planner returned invalid JSON: %s", exc)
             LOGGER.error("Raw response was: %s", raw_text[:500])
-            raise
+            return self._fallback_plan(request, context_summary, raw_response=raw_text)
         tasks_payload = payload.get("tasks", [])[: self._max_tasks]
         tasks: List[TaskSpec] = []
         for entry in tasks_payload:
@@ -105,7 +110,51 @@ class TaskPlanner:
                 LOGGER.error("Failed to parse task entry %s: %s", entry, exc)
                 continue
             tasks.append(task)
+        if not tasks:
+            LOGGER.warning("Planner produced no tasks; using fallback")
+            return self._fallback_plan(request, context_summary, raw_response=raw_text)
         return tasks
+
+    def _fallback_plan(
+        self,
+        request: str,
+        context_summary: str,
+        *,
+        error: Optional[str] = None,
+        raw_response: Optional[str] = None,
+    ) -> List[TaskSpec]:
+        LOGGER.warning(
+            "Falling back to heuristic plan | error=%s raw_len=%s",
+            error,
+            len(raw_response) if raw_response else None,
+        )
+        files = []
+        for token in request.replace("\n", " ").split():
+            cleaned = token.strip(",.'\"")
+            if "/" in cleaned and not cleaned.startswith("http") and any(
+                cleaned.endswith(ext)
+                for ext in (".py", ".md", ".json", ".yaml", ".yml", ".txt")
+            ):
+                files.append(cleaned)
+        # Deduplicate while preserving order
+        seen = set()
+        unique_files = []
+        for path in files:
+            if path not in seen:
+                seen.add(path)
+                unique_files.append(path)
+
+        description = f"Implement user request: {request}"
+        success = "Request completed and verified"
+        task = TaskSpec(
+            task_id="T1",
+            description=description,
+            files=unique_files,
+            success_criteria=[success],
+            budget="medium",
+            dependencies=[],
+        )
+        return [task]
 
     def _build_prompt(self, request: str, context_summary: str) -> List[SystemMessage]:
         messages: List[SystemMessage] = [SystemMessage(content=self._system_prompt)]

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 import pytest
 
 from orchestrator.workers.local_worker import LocalWorker
 from orchestrator.workers.tool_executor import ToolExecutor
+from orchestrator.core.task_planner import TaskSpec
 
 
 def test_worker_initializes_with_tool_executor(test_dir: Path):
@@ -43,7 +45,7 @@ def test_worker_prompt_includes_tool_instructions(test_dir: Path):
     prompt = worker._build_prompt(task)
     
     # Check that prompt includes tool instructions
-    assert "AVAILABLE TOOLS:" in prompt
+    assert "TOOLS:" in prompt
     assert "read_file" in prompt
     assert "write_file" in prompt
     assert "execute_bash" in prompt
@@ -74,4 +76,65 @@ def test_worker_tool_executor_working_dir_matches(test_dir: Path):
     
     assert worker._working_dir == test_dir
     assert worker._tool_executor.working_dir == test_dir
+
+
+def _make_simple_task() -> TaskSpec:
+    return TaskSpec(
+        task_id="T1",
+        description="Test task",
+        files=[],
+        success_criteria=[],
+    )
+
+
+def test_worker_parses_plain_json_response(monkeypatch, test_dir: Path):
+    """Worker should parse plain JSON responses."""
+    worker = LocalWorker(working_dir=test_dir, verify_outputs=False)
+    task = _make_simple_task()
+    response = json.dumps(
+        {
+            "success": True,
+            "files_modified": [],
+            "files_created": [],
+            "tests_run": [],
+            "verification_passed": True,
+            "errors": [],
+            "logs": ""
+        }
+    )
+    monkeypatch.setattr(worker, "_call_ollama", lambda prompt: response)
+    result = worker.execute(task, working_dir=test_dir)
+    assert result.success is True
+
+
+def test_worker_parses_markdown_json_response(monkeypatch, test_dir: Path):
+    """Worker should parse JSON embedded in markdown code fences."""
+    worker = LocalWorker(working_dir=test_dir, verify_outputs=False)
+    task = _make_simple_task()
+    response = "Here you go:\n```json\n" + json.dumps(
+        {
+            "success": True,
+            "files_modified": [],
+            "files_created": [],
+            "tests_run": [],
+            "verification_passed": True,
+            "errors": [],
+            "logs": "Executed successfully"
+        }
+    ) + "\n```"
+    monkeypatch.setattr(worker, "_call_ollama", lambda prompt: response)
+    result = worker.execute(task, working_dir=test_dir)
+    assert result.success is True
+    assert "Executed successfully" in result.logs
+
+
+def test_worker_handles_invalid_json_response(monkeypatch, test_dir: Path):
+    """Worker should return failure when JSON cannot be parsed."""
+    worker = LocalWorker(working_dir=test_dir, verify_outputs=False)
+    task = _make_simple_task()
+    response = "Oops, failed to produce JSON"
+    monkeypatch.setattr(worker, "_call_ollama", lambda prompt: response)
+    result = worker.execute(task, working_dir=test_dir)
+    assert result.success is False
+    assert any("Invalid JSON" in err for err in result.errors)
 
