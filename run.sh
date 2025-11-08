@@ -13,6 +13,12 @@ if [ -f ".venv/bin/activate" ]; then
     source .venv/bin/activate
 fi
 
-# Run the Python entry point (which handles PYTHONPATH automatically)
+# Source shared environment bootstrap (credentials, observability, PYTHONPATH)
+if [[ -f "scripts/rozet_dev_env.sh" ]]; then
+    # shellcheck disable=SC1091
+    source scripts/rozet_dev_env.sh
+fi
+
+# Run the Python entry point (which handles CLI dispatch)
 exec python rozet "$@"
 

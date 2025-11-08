@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Manual REPL testing script - simulates human interaction."""
 
+from __future__ import annotations
+
 import sys
 import time
 from pathlib import Path
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from orchestrator.config_loader import load_provider_config
 from orchestrator.core.context_manager import ConversationContextManager
@@ -96,10 +98,10 @@ def test_full_workflow():
         config = load_provider_config()
         llm, _ = create_chat_model(config.orchestrator)
         planner = TaskPlanner(llm=llm, system_prompt=None)
-        tool_executor = ToolExecutor(working_dir=project_root)
+        tool_executor = ToolExecutor(working_dir=PROJECT_ROOT)
         worker = LocalWorker(
             model='qwen2.5-coder:14b-instruct',
-            working_dir=project_root,
+            working_dir=PROJECT_ROOT,
             tool_executor=tool_executor,
             verify_outputs=False
         )
@@ -122,7 +124,7 @@ def test_full_workflow():
                 print(f"   Created: {result.files_created}")
         
         # Verify file was created
-        test_file = project_root / "test_manual.txt"
+        test_file = PROJECT_ROOT / "test_manual.txt"
         if test_file.exists():
             content = test_file.read_text()
             print(f"✅ File verified: {content}")
