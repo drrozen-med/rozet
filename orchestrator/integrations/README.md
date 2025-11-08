@@ -25,9 +25,11 @@ Observability server (HTTP → SQLite → WebSocket → Vue dashboard)
 - **TypeScript plugin** (`opencode/packages/plugin/src/rozet.ts`)
   - Tracks chat, sets planned tasks, hides Groq “thinking”, emits observability events.
 - **Python bridge** (`orchestrator/integrations/opencode_plugin_bridge.py`)
-  - Loads `.env` / `credentials/.env`, calls the orchestrator TaskPlanner, streams structured logs to `.opencode/logs/rozet-bridge.log`, emits observability events with the session ID provided by the plugin.
+  - Loads `.env` / `credentials/.env`, calls the orchestrator TaskPlanner, streams structured logs to `.opencode/logs/rozet-bridge.log`, emits observability events with the session ID provided by the plugin, and auto-executes tasks via `OpenCodeToolWorker` when `ROZET_USE_OPEN_CODE_TOOLS=1`.
 - **Observability client** (`orchestrator/core/observability.py` & `opencode/packages/plugin/src/observability.ts`)
   - Normalises environment variables and POSTs `SessionStart`, `UserPromptSubmit`, `TaskPlanned`, `ToolRequested`, `ToolCompleted/Failed`, `TaskCompleted/Failed`, etc., to Dan’s Bun server (`http://localhost:4000/events`).
+- **OpenCode tool shim** (`orchestrator/integrations/opencode_tool_client.py`, `orchestrator/workers/opencode_worker.py`)
+  - Currently delegates to local file/shell helpers but centralises the abstraction for future OpenCode API calls.
 
 ## Bringing the System Online
 

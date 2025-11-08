@@ -35,6 +35,13 @@ When finished:
 ./scripts/rozet_observability.sh stop
 ```
 
+Additional environment toggles (defaults in `scripts/rozet_dev_env.sh`):
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `ROZET_USE_OPEN_CODE_TOOLS` | Route auto-exec through OpenCode tool client (set `0` to disable) | `1` |
+| `ROZET_OPEN_CODE_BASE_URL` | Base URL for OpenCode server APIs | `http://localhost:4096` |
+
 ## What's Fixed
 
 ✅ **PYTHONPATH automatically set** - No manual export needed
