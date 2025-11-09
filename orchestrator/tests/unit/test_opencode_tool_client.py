@@ -7,7 +7,7 @@ from orchestrator.workers.opencode_worker import OpenCodeToolWorker
 
 
 def test_opencode_tool_client_write_and_read(tmp_path):
-    client = OpenCodeToolClient(working_dir=tmp_path)
+    client = OpenCodeToolClient(working_dir=tmp_path, provider="openai", model="gpt-4o-mini")
 
     write_result = client.write_file("demo.txt", "hello rozet")
     assert write_result["success"]
@@ -18,7 +18,7 @@ def test_opencode_tool_client_write_and_read(tmp_path):
 
 
 def test_opencode_worker_process_tool_usage(tmp_path):
-    worker = OpenCodeToolWorker(working_dir=tmp_path)
+    worker = OpenCodeToolWorker(working_dir=tmp_path, provider="openai", model="gpt-4o-mini")
 
     tools_used = [
         {"tool": "write_file", "file": "demo.txt", "content": "from worker"},

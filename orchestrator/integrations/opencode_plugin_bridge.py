@@ -132,6 +132,7 @@ def main():
     session_id = args.session_id or os.getenv("ROZET_SESSION_ID")
     auto_execute = args.auto_execute or _is_truthy(os.getenv("ROZET_AUTO_EXECUTE"))
     use_opencode_tools = _is_truthy(os.getenv("ROZET_USE_OPEN_CODE_TOOLS"), default=True)
+    opencode_base_url = os.getenv("ROZET_OPEN_CODE_BASE_URL")
     
     logger = setup_logger(working_dir)
     observability = ObservabilityClient(default_session_id=session_id)
@@ -257,7 +258,13 @@ def main():
                     )
                     if use_opencode_tools:
                         logger.debug("Using OpenCodeToolWorker for auto execution")
-                        worker = OpenCodeToolWorker(working_dir=working_dir, session_id=session_id)
+                        worker = OpenCodeToolWorker(
+                            working_dir=working_dir,
+                            session_id=session_id,
+                            provider=config.orchestrator.provider,
+                            model=config.orchestrator.model,
+                            base_url=opencode_base_url,
+                        )
                     else:
                         logger.debug("Using LocalWorker for auto execution (ROZET_USE_OPEN_CODE_TOOLS disabled)")
                         worker = LocalWorker(working_dir=working_dir)

@@ -28,6 +28,8 @@ class OpenCodeToolWorker(LocalWorker):
         model: str = "gpt-oss:20b",
         verify_outputs: bool = True,
         session_id: Optional[str] = None,
+        provider: str = "openai",
+        base_url: Optional[str] = None,
     ) -> None:
         super().__init__(
             model=model,
@@ -36,7 +38,10 @@ class OpenCodeToolWorker(LocalWorker):
         )
         self._tool_client = OpenCodeToolClient(
             working_dir=self._working_dir,
+            base_url=base_url,
             session_id=session_id,
+            provider=provider,
+            model=model,
             executor=self._tool_executor,
         )
 
