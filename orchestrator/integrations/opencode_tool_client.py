@@ -8,6 +8,7 @@ falls back to the local :class:`ToolExecutor`.
 from __future__ import annotations
 
 import logging
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -78,10 +79,49 @@ class OpenCodeToolClient:
 
     def read_file(self, path: str) -> Dict[str, Any]:
         """Read a file from disk."""
+        remote = self._call_remote_tool(
+            "read",
+            {
+                "filePath": path,
+            },
+            timeout=120,
+        )
+        if remote:
+            output = remote.get("output") if isinstance(remote, dict) else ""
+            metadata = remote.get("metadata", {}) if isinstance(remote, dict) else {}
+            return {
+                "content": output or "",
+                "exists": True,
+                "success": True,
+                "size": len(output or ""),
+                "preview": metadata.get("preview"),
+            }
         return self._executor.read_file(path)
 
     def list_files(self, directory: str = ".", pattern: str = "*") -> Dict[str, Any]:
         """List files relative to the working directory."""
+        remote = self._call_remote_tool(
+            "list",
+            {
+                "path": str(Path(directory)),
+                "ignore": [],
+            },
+            timeout=60,
+        )
+        if remote:
+            output = remote.get("output") if isinstance(remote, dict) else ""
+            metadata = remote.get("metadata", {}) if isinstance(remote, dict) else {}
+            files = [
+                line.strip()
+                for line in (output or "").splitlines()[1:]
+                if line.strip() and not line.strip().endswith("/")
+            ]
+            return {
+                "files": files,
+                "success": True,
+                "count": len(files),
+                "metadata": metadata,
+            }
         return self._executor.list_files(directory, pattern)
 
     # ------------------------------------------------------------------ #
@@ -96,14 +136,18 @@ class OpenCodeToolClient:
                 "description": command,
                 "timeout": max(int(timeout * 1000), 0),
             },
+            timeout=max(timeout, 60),
         )
         if remote:
             metadata = remote.get("metadata", {}) if isinstance(remote, dict) else {}
+            stdout = metadata.get("output") or remote.get("output", "") if isinstance(remote, dict) else ""
+            stderr = metadata.get("stderr", "")
             return ToolExecutionResult(
-                success=True,
-                stdout=metadata.get("output") or remote.get("output", "") if isinstance(remote, dict) else "",
-                stderr="",
+                success=not metadata.get("error"),
+                stdout=stdout,
+                stderr=stderr,
                 returncode=metadata.get("exit", 0),
+                error=metadata.get("error"),
             )
 
         result = self._executor.execute_bash(command, timeout=timeout)
@@ -118,7 +162,12 @@ class OpenCodeToolClient:
     # ------------------------------------------------------------------ #
     # Internal helpers
     # ------------------------------------------------------------------ #
-    def _call_remote_tool(self, tool: str, args: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _call_remote_tool(
+        self,
+        tool: str,
+        args: Dict[str, Any],
+        timeout: int = 120,
+    ) -> Optional[Dict[str, Any]]:
         if not self._base_url or not requests or not self._provider or not self._model:
             return None
 
@@ -139,11 +188,13 @@ class OpenCodeToolClient:
         }
 
         try:
-            response = requests.post(url, json=payload, timeout=120)
+            response = requests.post(url, json=payload, timeout=timeout)
             response.raise_for_status()
             data = response.json()
             if isinstance(data, dict) and data.get("success"):
-                return data.get("result")  # type: ignore[return-value]
+                result_payload = data.get("result")
+                if isinstance(result_payload, dict):
+                    return result_payload
         except Exception as exc:  # pragma: no cover - network failure fallback
             LOGGER.debug("Falling back to local tool executor: %s", exc)
         return None

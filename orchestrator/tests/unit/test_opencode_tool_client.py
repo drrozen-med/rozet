@@ -17,6 +17,52 @@ def test_opencode_tool_client_write_and_read(tmp_path):
     assert read_result["content"] == "hello rozet"
 
 
+def test_opencode_tool_client_remote_read(monkeypatch, tmp_path):
+    client = OpenCodeToolClient(
+        working_dir=tmp_path,
+        provider="openai",
+        model="gpt-4o-mini",
+        base_url="http://localhost:4096",
+    )
+
+    monkeypatch.setattr(client, "_call_remote_tool", lambda *args, **kwargs: {"output": "<file>content</file>"})
+
+    def _fail_read(*_args, **_kwargs):
+        raise RuntimeError("local read should not be called")
+
+    monkeypatch.setattr(client._executor, "read_file", _fail_read)  # type: ignore[attr-defined]
+
+    result = client.read_file("demo.txt")
+    assert result["success"]
+    assert result["content"].startswith("<file>")
+
+
+def test_opencode_tool_client_remote_list(monkeypatch, tmp_path):
+    client = OpenCodeToolClient(
+        working_dir=tmp_path,
+        provider="openai",
+        model="gpt-4o-mini",
+        base_url="http://localhost:4096",
+    )
+
+    fake_output = "path/\n  foo.txt\n  bar/\n    nested.txt\n"
+    monkeypatch.setattr(
+        client,
+        "_call_remote_tool",
+        lambda *args, **kwargs: {"output": fake_output, "metadata": {"count": 2}},
+    )
+
+    def _fail_list(*_args, **_kwargs):
+        raise RuntimeError("local list should not be called")
+
+    monkeypatch.setattr(client._executor, "list_files", _fail_list)  # type: ignore[attr-defined]
+
+    result = client.list_files(".")
+    assert result["success"]
+    assert "foo.txt" in result["files"]
+    assert "nested.txt" in result["files"]
+
+
 def test_opencode_worker_process_tool_usage(tmp_path):
     worker = OpenCodeToolWorker(working_dir=tmp_path, provider="openai", model="gpt-4o-mini")
 
