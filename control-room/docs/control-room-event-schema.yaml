@@ -1,0 +1,177 @@
+#
+# 2025-11-08T13:15:00+02:00
+# Purpose: Canonical schema for control room observability events (schema_version: 2).
+# Related: ./control-room-interface-contracts.md, orchestrator/core/observability.py
+#
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: ControlRoomEvent
+type: object
+required:
+  - schema_version
+  - source_app
+  - session_id
+  - event_type
+  - payload
+  - timestamp
+properties:
+  schema_version:
+    type: integer
+    const: 2
+    description: Version flag for enriched control-room events.
+  source_app:
+    type: string
+    description: Identifier for emitting application (e.g., rozet-control-room).
+  session_id:
+    type: string
+    minLength: 1
+    maxLength: 128
+    pattern: "^[a-zA-Z0-9_.:\\-]+$"
+    description: |
+      Session identifier. Accepts both legacy opaque strings (Claude, Rozet flat
+      IDs) and UUIDs. Format: ASCII alphanumeric plus underscore/hyphen/period/colon,
+      1-128 chars.
+      Server-side validation rejects empty strings and non-ASCII characters.
+      Examples: "session-abc123", "proj.550e8400:e29b:41d4:a716:446655440000"
+  agent_id:
+    type:
+      - string
+      - "null"
+    minLength: 1
+    maxLength: 128
+    pattern: "^[a-zA-Z0-9_.:\\-]+$"
+    description: |
+      Optional agent reference; may be omitted for system-level events.
+      Format: ASCII alphanumeric plus underscore/hyphen/period/colon, 1-128 chars.
+      Server rejects malformed IDs with 400 Bad Request.
+  task_id:
+    type:
+      - string
+      - "null"
+    description: Orchestrator task identifier (T1, uuid, etc.).
+  command_id:
+    type:
+      - string
+      - "null"
+    description: Identifier for command tracked by control-room API.
+  event_type:
+    type: string
+    enum:
+      # Control-room lifecycle events
+      - session.start
+      - session.end
+      - agent.created
+      - agent.updated
+      - agent.deleted
+      - command.queued
+      - command.started
+      - command.completed
+      - command.failed
+      - task.planned
+      - task.completed
+      - task.failed
+      - tool.requested
+      - tool.completed
+      - tool.failed
+      - hitl.requested
+      - hitl.responded
+      - telemetry.snapshot
+      # Legacy Claude/Rozet hook events for compatibility
+      - PreToolUse
+      - PostToolUse
+      - Notification
+      - Stop
+      - SubagentStop
+      - PreCompact
+      - SessionStart
+      - SessionEnd
+      - UserPromptSubmit
+  payload:
+    type: object
+    additionalProperties: true
+    description: Event-specific data (mirrors ObservabilityClient payloads).
+  token_usage:
+    type: object
+    properties:
+      prompt_tokens:
+        type: integer
+        minimum: 0
+      completion_tokens:
+        type: integer
+        minimum: 0
+      total_tokens:
+        type: integer
+        minimum: 0
+    required: []
+  cost_usd:
+    type: number
+    minimum: 0
+  model:
+    type: string
+    description: Model identifier used for the event (e.g., openai/gpt-4o-mini). Must match a provider/model from config/providers.yaml.
+  human_in_the_loop:
+    type: object
+    properties:
+      status:
+        type: string
+        enum:
+          - pending
+          - responded
+          - cancelled
+      response_websocket_url:
+        type: string
+        format: uri
+      summary:
+        type: string
+    required:
+      - status
+  files:
+    type: array
+    items:
+      type: object
+      properties:
+        path:
+          type: string
+        change_type:
+          type: string
+          enum:
+            - created
+            - modified
+            - deleted
+        diff:
+          type: string
+          description: Optional git-style diff snippet.
+      required:
+        - path
+  timestamp:
+    type: string
+    format: date-time
+    description: ISO-8601 timestamp in UTC.
+  metadata:
+    type: object
+    description: Any additional diagnostic info, instrumentation-level data, etc.
+  compatibility:
+    type: object
+    description: |
+      Optional block describing migration hints for legacy consumers.
+      Ownership: Set by the control-room API service when emitting events that
+      need backward compatibility. Consumers should check dual_write_enabled to
+      determine if legacy events are also being emitted. If present, legacy
+      consumers should prefer legacy_hook_event_type for filtering.
+    properties:
+      legacy_hook_event_type:
+        type: string
+        description: Original hook event type name (e.g., "PreToolUse") for legacy consumers.
+      dual_write_enabled:
+        type: boolean
+        description: |
+          True if the API is also emitting a legacy-format event (schema_version: 1)
+          to the observability pipeline. Legacy consumers should subscribe to both
+          streams during migration. Set by control-room API based on feature flag.
+      notes:
+        type: string
+        description: Human-readable migration guidance for consumers.
+
+additionalProperties: false
+
+
