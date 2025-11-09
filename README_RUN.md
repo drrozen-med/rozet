@@ -41,6 +41,8 @@ Additional environment toggles (defaults in `scripts/rozet_dev_env.sh`):
 | --- | --- | --- |
 | `ROZET_USE_OPEN_CODE_TOOLS` | Route auto-exec through OpenCode tool client (set `0` to disable) | `1` |
 | `ROZET_OPEN_CODE_BASE_URL` | Base URL for OpenCode server APIs | `http://localhost:4096` |
+| `ROZET_OPEN_CODE_PROVIDER` | Override provider sent to OpenCode tool worker (falls back to config) | *(config default)* |
+| `ROZET_OPEN_CODE_MODEL` | Override model hint sent to OpenCode tool worker (falls back to config) | *(config default)* |
 
 ## What's Fixed
 

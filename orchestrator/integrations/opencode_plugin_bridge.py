@@ -112,6 +112,25 @@ def _worker_result_to_dict(result: WorkerResult) -> dict:
     }
 
 
+def _resolve_opencode_runtime(config, env: Dict[str, str]) -> dict:
+    provider = env.get("ROZET_OPEN_CODE_PROVIDER")
+    if not provider:
+        priority = getattr(config, "opencode", None)
+        if priority and getattr(priority, "provider_priority", None):
+            provider = priority.provider_priority[0]
+        else:
+            provider = config.orchestrator.provider
+
+    model = env.get("ROZET_OPEN_CODE_MODEL") or config.orchestrator.model
+    base_url = env.get("ROZET_OPEN_CODE_BASE_URL")
+
+    return {
+        "provider": provider,
+        "model": model,
+        "base_url": base_url,
+    }
+
+
 def main():
     """Main entry point for OpenCode plugin bridge."""
     parser = argparse.ArgumentParser(description="Rozet orchestrator bridge for OpenCode")
@@ -132,7 +151,6 @@ def main():
     session_id = args.session_id or os.getenv("ROZET_SESSION_ID")
     auto_execute = args.auto_execute or _is_truthy(os.getenv("ROZET_AUTO_EXECUTE"))
     use_opencode_tools = _is_truthy(os.getenv("ROZET_USE_OPEN_CODE_TOOLS"), default=True)
-    opencode_base_url = os.getenv("ROZET_OPEN_CODE_BASE_URL")
     
     logger = setup_logger(working_dir)
     observability = ObservabilityClient(default_session_id=session_id)
@@ -163,6 +181,7 @@ def main():
             extra={"config_path": str(config_path), "auto_execute": auto_execute},
         )
         config = load_provider_config(config_path)
+        opencode_runtime = _resolve_opencode_runtime(config, os.environ)
         logger.debug("Config loaded successfully")
         
         # Initialize orchestrator components
@@ -257,13 +276,20 @@ def main():
                         len(tasks),
                     )
                     if use_opencode_tools:
-                        logger.debug("Using OpenCodeToolWorker for auto execution")
+                        logger.debug(
+                            "Using OpenCodeToolWorker for auto execution",
+                            extra={
+                                "provider": opencode_runtime["provider"],
+                                "model": opencode_runtime["model"],
+                                "base_url": opencode_runtime["base_url"],
+                            },
+                        )
                         worker = OpenCodeToolWorker(
                             working_dir=working_dir,
                             session_id=session_id,
-                            provider=config.orchestrator.provider,
-                            model=config.orchestrator.model,
-                            base_url=opencode_base_url,
+                            provider=opencode_runtime["provider"],
+                            model=opencode_runtime["model"],
+                            base_url=opencode_runtime["base_url"],
                         )
                     else:
                         logger.debug("Using LocalWorker for auto execution (ROZET_USE_OPEN_CODE_TOOLS disabled)")

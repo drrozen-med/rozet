@@ -31,6 +31,15 @@ Observability server (HTTP → SQLite → WebSocket → Vue dashboard)
 - **OpenCode tool shim** (`orchestrator/integrations/opencode_tool_client.py`, `orchestrator/workers/opencode_worker.py`)
   - Currently delegates to local file/shell helpers but centralises the abstraction for future OpenCode API calls.
 
+### Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `ROZET_USE_OPEN_CODE_TOOLS` | Enables OpenCode-backed auto execution (`1` by default). |
+| `ROZET_OPEN_CODE_BASE_URL` | Base URL for the OpenCode server (defaults to `http://localhost:4096`). |
+| `ROZET_OPEN_CODE_PROVIDER` | Optional provider ID override sent to the OpenCode tool worker (falls back to provider config). |
+| `ROZET_OPEN_CODE_MODEL` | Optional model ID override sent to the OpenCode tool worker (falls back to provider config). |
+
 ## Bringing the System Online
 
 1. **Load Rozet development environment**
