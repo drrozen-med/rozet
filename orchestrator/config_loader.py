@@ -73,11 +73,21 @@ class ProviderConfig:
 
 
 @dataclass
+class OpenCodeConfig:
+    """OpenCode-specific configuration for model filtering and provider control."""
+    disabled_models: List[str] = field(default_factory=list)
+    allowed_models_only: bool = False
+    allowed_models: List[str] = field(default_factory=list)
+    provider_priority: List[str] = field(default_factory=list)
+
+
+@dataclass
 class ProviderMap:
     orchestrator: ProviderConfig
     workers: Dict[str, ProviderConfig] = field(default_factory=dict)
     credentials: Dict[str, str] = field(default_factory=dict)
     budget: Dict[str, float] = field(default_factory=dict)
+    opencode: OpenCodeConfig = field(default_factory=OpenCodeConfig)
 
 
 def _normalize_provider(entry: dict) -> ProviderConfig:
@@ -127,11 +137,21 @@ def load_provider_config(config_path: Optional[os.PathLike[str]] = None) -> Prov
 
     workers = {name: _normalize_provider(cfg) for name, cfg in workers_entry.items()}
 
+    # Load OpenCode config
+    opencode_raw = raw.get("opencode", {})
+    opencode_config = OpenCodeConfig(
+        disabled_models=opencode_raw.get("disabled_models", []),
+        allowed_models_only=opencode_raw.get("allowed_models_only", False),
+        allowed_models=opencode_raw.get("allowed_models", []),
+        provider_priority=opencode_raw.get("provider_priority", []),
+    )
+    
     config = ProviderMap(
         orchestrator=_normalize_provider(orchestrator_entry),
         workers=workers,
         credentials=raw.get("credentials", {}),
         budget=raw.get("budget", {}),
+        opencode=opencode_config,
     )
 
     # Only validate credentials for providers we're actually using

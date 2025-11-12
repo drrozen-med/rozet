@@ -3,24 +3,28 @@
 This guide walks through the base setup for the orchestrator platform. It covers
 Python dependencies, cloud credentials, and local model provisioning.
 
-## 1. Python environment
+## 1. Python environment (uv-managed)
 
-We recommend using `uv` or `python -m venv` to isolate dependencies. The
-`requirements.txt` at the repository root captures the versions that align with
-our orchestration plan (LangChain 0.3.x + provider SDKs).
+All Python tooling now runs through [uv](https://github.com/astral-sh/uv). Install it once:
 
 ```bash
-# create a virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# install dependencies
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-> **Note:** Homebrew-managed Python (PEP 668) may block global installs. Always
-> work inside the virtual environment, or run `pip install --break-system-packages`
-> if you understand the risks.
+Then, from the repository root, sync dependencies (including dev/test tooling):
+
+```bash
+uv sync --extra dev
+```
+
+This reads `pyproject.toml` / `uv.lock` and populates a cached `.venv` automatically. To execute any
+Python entry point, preferring uv ensures the lockfile is respected:
+
+```bash
+uv run python rozet --help
+```
+
+> `pip install -r requirements.txt` is no longer supported; the file now points to `uv` as the single source of truth.
 
 ## 2. Cloud credentials
 
@@ -74,3 +78,28 @@ ollama create careful-qwen -f files/Modelfile.qwen14b
 
 Keep this document updated whenever we add new credentials or environment
 requirements.
+
+## 5. Control Room (In Progress)
+
+The control-room stack introduces additional services. During Milestone 0 we
+prepare the following prerequisites so engineers can iterate locally before the
+Cloud Run deployment:
+
+1. **PostgreSQL** – run via Docker Compose for development. Copy
+   `config/control-room/.env.example` (to be added) into `.env.dev`, then start
+   the database with `docker compose up control-room-db`. Production will use
+   Cloud SQL for PostgreSQL with a private Cloud Run connector.
+2. **FastAPI Service** – after `uv sync` you already have the control-room backend deps. Launch with:
+   ```bash
+   uv run uvicorn control_room_api.app:create_app --reload --factory --port 8001
+   ```
+3. **Next.js + shadcn UI** – after we scaffold the client, install Node 20+ and
+   Bun, then run `pnpm install` (we standardise on pnpm) followed by
+   `pnpm dev --filter control-room-client`.
+4. **Environment Variables** – store shared secrets (database DSN, JWT signing
+   key) in `config/control-room/.env`. Never commit these; use Secret Manager for
+   Cloud Run.
+
+We will update this section as the backend/frontend repositories land. For now,
+ensure Docker, pnpm, and the Google Cloud CLI are installed so the squad can
+spin up the new services quickly.

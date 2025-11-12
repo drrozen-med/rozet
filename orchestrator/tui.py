@@ -30,6 +30,7 @@ from orchestrator.core.coordinator import Coordinator
 from orchestrator.core.observability import ObservabilityClient
 from orchestrator.providers.factory import create_chat_model
 from orchestrator.workers.local_worker import LocalWorker
+from uuid import uuid4
 
 
 LOGGER = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
             config = load_provider_config(config_path)
         
         # Show welcome message with actual provider/model info
-        provider_info = f"{config.orchestrator.provider}/{config.orchestrator.model}"
+        provider_info = f"{config.orchestrator.model}"
         console.print(Panel.fit(
             f"[bold cyan]Rozet Orchestrator[/bold cyan]\n"
             f"[dim]Using:[/dim] [yellow]{provider_info}[/yellow]\n"
@@ -156,7 +157,10 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
             )
             
             # Create observability client
-            observability = ObservabilityClient()
+            session_id = str(uuid4())
+            observability = ObservabilityClient(default_session_id=session_id)
+            observability.session_start(session_id, mode="tui")
+            session_active = True
             
             # Create worker and coordinator (for execution)
             worker = LocalWorker(working_dir=wd)
@@ -184,6 +188,8 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
                 cmd = user_input.strip().lower()
                 if cmd in ("exit", "quit", "q"):
                     console.print("\n[bold yellow]Goodbye![/bold yellow]")
+                    observability.session_end(session_id, mode="tui", reason="user_exit")
+                    session_active = False
                     break
                 elif cmd == "help":
                     console.print("\n[bold]Commands:[/bold]")
@@ -207,6 +213,7 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
                     context_manager.record_user(user_input)
                     context_manager.record_assistant(response)
                     context_manager.persist()
+                    observability.user_message(session_id, user_input, mode="tui", conversational=True)
                     
                     # Display response
                     console.print(f"\n[bold magenta]Rozet[/bold magenta]: {response}\n")
@@ -219,6 +226,7 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
                     
                     # Record user request
                     context_manager.record_user(user_input)
+                    observability.user_message(session_id, user_input, mode="tui")
                     
                     # Plan tasks
                     tasks = planner.plan(user_input, context_summary=context_summary)
@@ -226,6 +234,7 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
                     # Send observability events
                     for task in tasks:
                         observability.task_planned(
+                            session_id,
                             task_id=task.task_id,
                             description=task.description,
                             files=task.files,
@@ -294,10 +303,14 @@ def run_interactive_tui(config_path: Optional[Path] = None, working_dir: Optiona
                 LOGGER.exception("Error in TUI loop")
                 continue
         
+        if session_active:
+            observability.session_end(session_id, mode="tui")
         return 0
         
     except Exception as e:
         console.print(f"[bold red]Failed to start TUI:[/bold red] {e}")
         LOGGER.exception("Failed to start TUI")
+        if "observability" in locals() and "session_active" in locals() and session_active:
+            observability.session_end(session_id, mode="tui", error=str(e))
         return 1
 

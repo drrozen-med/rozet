@@ -145,13 +145,33 @@ python -m orchestrator.cli --repl
 4. **Tool Integration** - Better tool usage tracking and verification
 5. **Multi-Agent** - Actual agent spawning and coordination
 
-## 📝 Next Steps
+## 📝 Next Steps (UPDATED PRIORITY)
 
+### 🔥 CURRENT FOCUS: OpenCode Provider/Model System Fix
+**See:** `OPENCODE_PROVIDER_FIX_PLAN.md`
+
+**Goal:** Fix OpenCode's "fucked-up" model switching and provider system to provide precise, programmatic control.
+
+**Phase 1 Tasks:**
+1. Create OpenCode provider bridge (Python) - clean API for model/provider operations
+2. Replace OpenCode's hardcoded default model selection with config-driven approach
+3. Fix model filtering/blacklisting to be configurable
+4. Fix provider loading precedence (clear order: Config → Env → Defaults)
+5. Create programmatic API for all operations
+
+**Why This First:**
+- OpenCode's provider system has hardcoded priorities, complex state, unclear precedence
+- Our orchestrator has clean, config-driven, testable approach
+- Need precise control before integrating tools/session system
+- Can test programmatically with existing infrastructure
+
+### Future Steps (After Provider Fix)
 1. **Fix Worker Timeouts** - Implement async execution or better timeout handling
 2. **Improve API Auth** - Better validation and error messages
-3. **OpenCode Integration** - Connect to OpenCode tools and session system
+3. **OpenCode Integration** - Connect to OpenCode tools and session system (after provider fix)
 4. **Context Enhancement** - Better file indexing and summarization
-5. **Multi-Agent Deployment** - Actual agent spawning and coordination
+5. **TUI Modifications** - Customize OpenCode TUI (wait until end)
+6. **Multi-Agent Deployment** - Actual agent spawning and coordination
 
 ## 🔧 Configuration
 

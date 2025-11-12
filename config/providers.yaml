@@ -3,7 +3,7 @@
 
 orchestrator:
   provider: openai
-  model: gpt-5-nano  # GPT-5 nano (affordable, fast, 400K context) - DEFAULT
+  model: openai/gpt-4o-mini  # GPT-4o mini (affordable, fast, reliable) - UPDATED
   temperature: 0.0
   endpoint: https://openrouter.ai/api/v1  # Using OpenRouter for flexibility
   system_prompt_path: prompts/orchestrator.md
@@ -33,5 +33,22 @@ credentials:
 budget:
   max_session_usd: 5.0
   max_task_usd: 0.75
+
+# OpenCode integration: model filtering configuration
+opencode:
+  # Models to disable (override OpenCode's hardcoded blacklist)
+  disabled_models:
+    # - "gpt-5-chat-latest"  # Uncomment to disable specific models
+  # If true, only show models in allowed_models (whitelist mode)
+  allowed_models_only: false
+  # Whitelist of allowed models (if allowed_models_only is true)
+  allowed_models:
+    # - "openai/gpt-5-nano"
+    # - "anthropic/claude-3-5-sonnet"
+  # Provider priority (order to try providers)
+  provider_priority:
+    - "openrouter"  # Try first
+    - "openai"      # Fallback
+    - "anthropic"   # Last resort
 
 # Future work: add azure, aws, groq endpoints.

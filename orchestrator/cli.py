@@ -14,6 +14,7 @@ from orchestrator.config_loader import load_provider_config
 from orchestrator.core.context_manager import ConversationContextManager
 from orchestrator.core.coordinator import Coordinator
 from orchestrator.core.observability import ObservabilityClient
+from uuid import uuid4
 from orchestrator.core.task_planner import TaskPlanner
 from orchestrator.providers.factory import create_chat_model
 from orchestrator.workers.local_worker import LocalWorker
@@ -167,7 +168,9 @@ def run_plan(args: argparse.Namespace) -> int:
         context_manager.record_user(args.request)
         
         # Create observability client
-        observability = ObservabilityClient()
+        session_id = str(uuid4())
+        observability = ObservabilityClient(default_session_id=session_id)
+        observability.session_start(session_id, mode="cli", request=args.request)
         
         # Plan tasks
         tasks = planner.plan(args.request, context_summary=context_summary)
@@ -175,6 +178,7 @@ def run_plan(args: argparse.Namespace) -> int:
         # Send observability events for planned tasks
         for task in tasks:
             observability.task_planned(
+                session_id,
                 task_id=task.task_id,
                 description=task.description,
                 files=task.files,
@@ -216,17 +220,17 @@ def run_plan(args: argparse.Namespace) -> int:
         if args.execute:
             # Create worker
             worker = LocalWorker(working_dir=args.working_dir)
-            
+
             # Create coordinator with observability
             coordinator = Coordinator(
                 worker=worker,
                 context_manager=context_manager,
                 observability=observability,
             )
-            
+
             # Execute tasks
             results = coordinator.execute_tasks(tasks, working_dir=args.working_dir)
-            
+
             # Record results
             for result in results:
                 result_summary = (
@@ -236,9 +240,9 @@ def run_plan(args: argparse.Namespace) -> int:
                 if result.errors:
                     result_summary += f" Errors: {', '.join(result.errors)}"
                 context_manager.record_assistant(result_summary)
-            
+
             context_manager.persist()
-            
+
             # Output results
             if args.output_format == "json":
                 output = {
@@ -268,10 +272,13 @@ def run_plan(args: argparse.Namespace) -> int:
                     if result.errors:
                         print(f"  Errors: {', '.join(result.errors)}")
         
+        observability.session_end(session_id, mode="cli")
         return 0
         
     except Exception as exc:
         logging.exception("Orchestrator failed")
+        if 'observability' in locals():
+            observability.session_end(session_id, mode="cli", error=str(exc))
         if args.output_format == "json":
             error_output = {"error": str(exc), "type": type(exc).__name__}
             print(json.dumps(error_output, indent=2))

@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
+import warnings
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
+
+# Suppress LangChain deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*LangChainDeprecationWarning.*")
+warnings.filterwarnings("ignore", message=".*migration guide.*")
 
 # Lazy import pattern to handle version compatibility issues
 # We'll import ConversationSummaryBufferMemory only when needed
@@ -66,11 +72,15 @@ class ConversationContextManager:
         storage_path: Optional[Path] = None,
     ) -> None:
         ConversationSummaryBufferMemory = _get_conversation_summary_buffer_memory()
-        self._memory = ConversationSummaryBufferMemory(
-            llm=llm,
-            max_token_limit=max_token_limit,
-            return_messages=True,
-        )
+        # Suppress deprecation warning when creating memory object
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            warnings.filterwarnings("ignore")
+            self._memory = ConversationSummaryBufferMemory(
+                llm=llm,
+                max_token_limit=max_token_limit,
+                return_messages=True,
+            )
         self._storage_path = storage_path or Path("experiments/logs/orchestrator_context.jsonl")
         self._storage_path.parent.mkdir(parents=True, exist_ok=True)
         LOGGER.debug("ConversationContextManager initialized | storage=%s", self._storage_path)

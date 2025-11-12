@@ -2,6 +2,11 @@
 
 ## Quick Start (Everything Works!)
 
+### Install dependencies (run once)
+```bash
+uv sync --extra dev
+```
+
 ### Run REPL (Interactive Mode)
 ```bash
 ./rozet --repl

@@ -116,14 +116,19 @@ orchestrator/
 ✅ **Tool Integration**: LangChain tools can call OpenCode tools  
 ✅ **Production Ready**: Battle-tested abstractions  
 
-### Next Steps
+### Next Steps (UPDATED PRIORITY)
 
 1. ✅ Confirm LangChain usage (DONE - we're using it comprehensively)
-2. ✅ Model switching capability (DONE - config-driven)
+2. ✅ Model switching capability (DONE - config-driven in our orchestrator)
 3. ✅ System prompt scaffolding (DONE - configurable)
-4. 🔄 **Next**: Integrate REPL into OpenCode as "Rozet" command
-5. 🔄 **Then**: Connect OpenCode session system to our orchestrator
-6. 🔄 **Finally**: Full REPL with OpenCode tools + our orchestrator
+4. 🔥 **CURRENT PRIORITY**: Fix OpenCode's model/provider system (see `OPENCODE_PROVIDER_FIX_PLAN.md`)
+   - Create provider bridge with clean API
+   - Replace hardcoded priorities with config-driven approach
+   - Make model switching programmatically controllable
+   - Testable with existing infrastructure
+5. 🔄 **Then**: Integrate REPL into OpenCode as "Rozet" command
+6. 🔄 **After**: Connect OpenCode session system to our orchestrator
+7. 🔄 **Finally**: TUI modifications (if still needed)
 
 ## Summary
 

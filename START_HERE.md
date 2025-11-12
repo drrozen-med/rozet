@@ -2,6 +2,10 @@
 
 ## 🚀 Quick Start
 
+```bash
+uv sync --extra dev
+```
+
 ### Option 1: Global Command (Recommended)
 
 First, install the global command:
@@ -110,5 +114,15 @@ The orchestrator automatically detects OpenRouter endpoints and uses the correct
 - API authentication needs valid keys (setup script helps)
 
 See `STATUS.md` for detailed status and architecture.
+
+## 🔭 Coming Soon: Control Room Preview
+
+- We are incubating a **Next.js + shadcn** control-room UI backed by a FastAPI
+  service on Cloud Run and PostgreSQL (Cloud SQL). The goal is to provide the
+  orchestrator command center you have seen in the TAC demos.
+- Milestone 0 is underway: schemas, interface contracts, and integration tests
+  live under `control-room/docs/*` and `orchestrator/tests/integration/`.
+- No action required yet, but make sure Docker, pnpm, and Cloud SDK are installed
+  so you can run the prototype once it lands.
 
 **Everything is tested and ready. Run `./rozet --repl` to start!**

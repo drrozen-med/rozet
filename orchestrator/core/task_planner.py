@@ -63,23 +63,38 @@ class TaskPlanner:
     def plan(self, request: str, context_summary: str = "") -> List[TaskSpec]:
         prompt = self._build_prompt(request, context_summary)
         try:  # pragma: no cover - defensive (LLM failures are runtime issues)
+            LOGGER.debug("Calling LLM for task planning", extra={"request_length": len(request)})
             response = self._llm.invoke(prompt)
+            LOGGER.debug("LLM call successful")
         except Exception as exc:
-            LOGGER.error("Planner invocation failed: %s", exc)
-            return self._fallback_plan(request, context_summary, error=str(exc))
+            error_msg = str(exc)
+            LOGGER.error("Planner invocation failed: %s", exc, exc_info=True)
+            # Log the full error details
+            if "User not found" in error_msg or "401" in error_msg:
+                LOGGER.error("Authentication error detected - check API key configuration")
+            return self._fallback_plan(request, context_summary, error=error_msg)
 
         raw_text = getattr(response, "content", str(response))
-        LOGGER.debug("Planner raw response: %s", raw_text)
+        LOGGER.debug("Planner raw response (first 500 chars): %s", raw_text[:500])
         
         # Extract JSON from markdown code blocks if present
         if "```json" in raw_text:
             start = raw_text.find("```json") + 7
             end = raw_text.find("```", start)
-            raw_text = raw_text[start:end].strip()
+            if end > start:
+                raw_text = raw_text[start:end].strip()
         elif "```" in raw_text:
             start = raw_text.find("```") + 3
             end = raw_text.find("```", start)
-            raw_text = raw_text[start:end].strip()
+            if end > start:
+                raw_text = raw_text[start:end].strip()
+        
+        # Try to find JSON object in the text (look for { ... })
+        if not raw_text.strip().startswith("{"):
+            json_start = raw_text.find("{")
+            json_end = raw_text.rfind("}")
+            if json_start >= 0 and json_end > json_start:
+                raw_text = raw_text[json_start:json_end+1].strip()
         
         # Remove any leading/trailing whitespace
         raw_text = raw_text.strip()

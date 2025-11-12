@@ -168,7 +168,7 @@ class LocalWorker:
         LOGGER.debug("Calling Ollama HTTP API: %s", self._model)
         
         try:
-            response = requests.post(url, json=payload, timeout=120)
+            response = requests.post(url, json=payload, timeout=300)  # Increased from 120 to 300 seconds
             response.raise_for_status()
             data = response.json()
             return data.get("response", "").strip()

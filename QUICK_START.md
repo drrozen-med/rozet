@@ -20,12 +20,11 @@ export PYTHONPATH=/Users/urirozen/projects/rozet
 ./orchestrator/run.sh --repl
 ```
 
-### Option 3: Manual (set PYTHONPATH)
+### Option 3: Manual (uv run)
 ```bash
 cd /Users/urirozen/projects/rozet
-source .venv/bin/activate
-export PYTHONPATH=.
-python orchestrator/cli.py --repl
+uv sync --extra dev
+uv run python orchestrator/cli.py --repl
 ```
 
 ### Option 4: Add to your shell config (permanent fix)
@@ -33,7 +32,7 @@ Add this to your `~/.zshrc`:
 ```bash
 # Rozet Orchestrator
 export ROZET_ROOT=/Users/urirozen/projects/rozet
-alias rozet="cd $ROZET_ROOT && source .venv/bin/activate && export PYTHONPATH=. && python orchestrator/cli.py"
+alias rozet="cd $ROZET_ROOT && uv run python orchestrator/cli.py"
 ```
 
 Then just run:
@@ -45,6 +44,5 @@ rozet --repl
 
 ```bash
 # Test it works
-export PYTHONPATH=/Users/urirozen/projects/rozet
-python orchestrator/cli.py plan "test" --dry-run
+uv run python orchestrator/cli.py plan "test" --dry-run
 ```
